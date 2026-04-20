@@ -23,9 +23,6 @@ spec:
           image: ghcr.io/catdevops1/cluster-ai-frontend:latest
           ports:
             - containerPort: 80
-          env:
-            - name: NEXT_PUBLIC_API_URL
-              value: "https://cluster-ai.catdevops.net/api"
           resources:
             requests:
               memory: "128Mi"
