@@ -16,6 +16,8 @@ spec:
         app: cluster-ai-api
     spec:
       serviceAccountName: cluster-ai-sa
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: cluster-ai-api
           image: ghcr.io/catdevops1/cluster-ai-api:latest
@@ -23,7 +25,7 @@ spec:
             - containerPort: 8000
           envFrom:
             - secretRef:
-                name: cluster-ai-secrets
+                name: cluster-ai-secret
           resources:
             requests:
               memory: "256Mi"

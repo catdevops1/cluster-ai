@@ -16,6 +16,8 @@ spec:
       labels:
         app: cluster-ai-frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: cluster-ai-frontend
           image: ghcr.io/catdevops1/cluster-ai-frontend:latest
