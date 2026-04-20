@@ -1,4 +1,4 @@
-i# ollama-pull-job.yaml - pulls llama3.2:3b on first deploy
+# ollama-pull-job.yaml - pulls llama3.2:3b on first deploy
 apiVersion: batch/v1
 kind: Job
 metadata:
