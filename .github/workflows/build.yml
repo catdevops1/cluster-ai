@@ -28,6 +28,7 @@ jobs:
         with:
           context: ./backend
           push: ${{ github.event_name != 'pull_request' }}
+          no-cache: true
           tags: |
             ghcr.io/${{ env.ORG }}/cluster-ai-api:latest
             ghcr.io/${{ env.ORG }}/cluster-ai-api:${{ github.sha }}
@@ -50,6 +51,7 @@ jobs:
         with:
           context: ./frontend
           push: ${{ github.event_name != 'pull_request' }}
+          no-cache: true
           tags: |
             ghcr.io/${{ env.ORG }}/cluster-ai-frontend:latest
             ghcr.io/${{ env.ORG }}/cluster-ai-frontend:${{ github.sha }}
