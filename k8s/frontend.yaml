@@ -1,0 +1,33 @@
+# frontend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-ai-frontend
+  namespace: cluster-ai
+  labels:
+    app: cluster-ai-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-ai-frontend
+  template:
+    metadata:
+      labels:
+        app: cluster-ai-frontend
+    spec:
+      containers:
+        - name: cluster-ai-frontend
+          image: ghcr.io/catdevops1/cluster-ai-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://cluster-ai.catdevops.net/api"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"

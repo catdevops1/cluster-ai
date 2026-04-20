@@ -1,0 +1,26 @@
+i# ollama-pull-job.yaml - pulls llama3.2:3b on first deploy
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull-llama3
+  namespace: cluster-ai
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: node03
+      restartPolicy: OnFailure
+      containers:
+        - name: ollama-pull
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Ollama to be ready..."
+              sleep 30
+              curl -X POST http://ollama.cluster-ai.svc.cluster.local:11434/api/pull \
+                -H "Content-Type: application/json" \
+                -d '{"name": "llama3.2:3b"}'
+              echo "Model pulled successfully"
+

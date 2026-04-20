@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-ai-api
+  namespace: cluster-ai
+  labels:
+    app: cluster-ai-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-ai-api
+  template:
+    metadata:
+      labels:
+        app: cluster-ai-api
+    spec:
+      serviceAccountName: cluster-ai-sa
+      containers:
+        - name: cluster-ai-api
+          image: ghcr.io/catdevops1/cluster-ai-api:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: cluster-ai-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
