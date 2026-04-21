@@ -1,4 +1,3 @@
-# ollama.yaml - Longhorn PVC + Deployment pinned to node03
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -31,7 +30,7 @@ spec:
         app: ollama
     spec:
       nodeSelector:
-        kubernetes.io/hostname: node03
+        kubernetes.io/hostname: node04
       containers:
         - name: ollama
           image: ollama/ollama:latest
@@ -44,6 +43,7 @@ spec:
             limits:
               memory: "6Gi"
               cpu: "2000m"
+              nvidia.com/gpu: 1
           volumeMounts:
             - name: ollama-data
               mountPath: /root/.ollama
@@ -63,4 +63,3 @@ spec:
         - name: ollama-data
           persistentVolumeClaim:
             claimName: ollama-models-pvc
-
