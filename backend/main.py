@@ -123,7 +123,7 @@ Rules:
         "stream": False,
     }
 
-    async with httpx.AsyncClient(timeout=60.0) as http:
+    async with httpx.AsyncClient(timeout=300.0) as http:
         try:
             res = await http.post(f"{OLLAMA_URL}/api/generate", json=payload)
             res.raise_for_status()
