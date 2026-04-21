@@ -23,9 +23,14 @@ spec:
           image: ghcr.io/catdevops1/cluster-ai-api:latest
           ports:
             - containerPort: 8000
-          envFrom:
-            - secretRef:
-                name: cluster-ai-secret
+          env:
+            - name: MODEL_NAME
+              value: "llama3.2:1b"
+            - name: OLLAMA_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-ai-secret
+                  key: OLLAMA_URL
           resources:
             requests:
               memory: "256Mi"
