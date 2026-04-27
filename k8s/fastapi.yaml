@@ -31,6 +31,11 @@ spec:
                 secretKeyRef:
                   name: cluster-ai-secret
                   key: OLLAMA_URL
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-ai-secret
+                  key: ANTHROPIC_API_KEY
           resources:
             requests:
               memory: "256Mi"

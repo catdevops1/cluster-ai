@@ -11,15 +11,22 @@ const SUGGESTED = [
 
 const API_URL = "/api";
 
+const PROVIDERS = [
+  { id: "ollama", label: "Ollama", icon: "🦙", desc: "Local · Slow" },
+  { id: "claude", label: "Claude", icon: "✳️", desc: "Cloud · Fast" },
+];
+
 export default function App() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       text: "Hi! I'm your Kubernetes cluster assistant. Ask me anything about your cluster.",
+      provider: null,
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [provider, setProvider] = useState("ollama");
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -30,19 +37,23 @@ export default function App() {
     if (!question.trim() || loading) return;
     const q = question.trim();
     setInput("");
-    setMessages((m) => [...m, { role: "user", text: q }]);
+    setMessages((m) => [...m, { role: "user", text: q, provider }]);
     setLoading(true);
 
     try {
       const res = await fetch(`${API_URL}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, provider }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "assistant", text: data.answer || "No response." }]);
+      setMessages((m) => [...m, {
+        role: "assistant",
+        text: data.answer || "No response.",
+        provider: data.provider,
+      }]);
     } catch (e) {
-      setMessages((m) => [...m, { role: "assistant", text: "⚠️ Error reaching the API." }]);
+      setMessages((m) => [...m, { role: "assistant", text: "⚠️ Error reaching the API.", provider: null }]);
     }
     setLoading(false);
   };
@@ -57,16 +68,42 @@ export default function App() {
       {/* Header */}
       <div style={{
         padding: "16px 24px", borderBottom: "1px solid rgba(99,179,237,0.2)",
-        background: "rgba(15,15,26,0.8)", display: "flex", alignItems: "center", gap: 12,
+        background: "rgba(15,15,26,0.8)", display: "flex", alignItems: "center",
+        justifyContent: "space-between",
       }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 8,
-          background: "linear-gradient(135deg, #326ce5, #63b3ed)",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-        }}>⎈</div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#63b3ed" }}>Cluster AI</div>
-          <div style={{ fontSize: 12, color: "#718096" }}>catdevops.net · natural language interface</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: "linear-gradient(135deg, #326ce5, #63b3ed)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+          }}>⎈</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#63b3ed" }}>Cluster AI</div>
+            <div style={{ fontSize: 12, color: "#718096" }}>catdevops.net · natural language interface</div>
+          </div>
+        </div>
+
+        {/* Provider toggle */}
+        <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,0.05)", padding: 4, borderRadius: 10 }}>
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setProvider(p.id)}
+              style={{
+                padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 600, transition: "all 0.2s",
+                background: provider === p.id
+                  ? p.id === "claude"
+                    ? "linear-gradient(135deg, #d97706, #f59e0b)"
+                    : "linear-gradient(135deg, #326ce5, #63b3ed)"
+                  : "transparent",
+                color: provider === p.id ? "white" : "#718096",
+              }}
+            >
+              {p.icon} {p.label}
+              <span style={{ marginLeft: 6, fontWeight: 400, opacity: 0.8 }}>{p.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -92,13 +129,21 @@ export default function App() {
                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
               }}>⎈</div>
             )}
-            <div style={{
-              maxWidth: "70%", padding: "12px 16px",
-              borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-              background: m.role === "user" ? "linear-gradient(135deg, #326ce5, #4a90d9)" : "rgba(255,255,255,0.05)",
-              border: m.role === "user" ? "none" : "1px solid rgba(99,179,237,0.15)",
-              fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap",
-            }}>{m.text}</div>
+            <div>
+              <div style={{
+                maxWidth: "70%", padding: "12px 16px",
+                borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                background: m.role === "user" ? "linear-gradient(135deg, #326ce5, #4a90d9)" : "rgba(255,255,255,0.05)",
+                border: m.role === "user" ? "none" : "1px solid rgba(99,179,237,0.15)",
+                fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap",
+              }}>{m.text}</div>
+              {/* Provider badge */}
+              {m.provider && (
+                <div style={{ fontSize: 10, color: "#4a5568", marginTop: 4, paddingLeft: 4 }}>
+                  {m.provider === "claude" ? "✳️ Claude" : "🦙 Ollama"}
+                </div>
+              )}
+            </div>
           </div>
         ))}
         {loading && (
@@ -120,6 +165,9 @@ export default function App() {
                   animationDelay: `${i * 0.2}s`, opacity: 0.7,
                 }} />
               ))}
+              <span style={{ fontSize: 12, color: "#718096", marginLeft: 4 }}>
+                {provider === "claude" ? "Asking Claude..." : "Asking Ollama..."}
+              </span>
             </div>
           </div>
         )}
@@ -135,7 +183,7 @@ export default function App() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && ask(input)}
-          placeholder="Ask about your cluster..."
+          placeholder={`Ask about your cluster (${provider === "claude" ? "Claude" : "Ollama"})...`}
           style={{
             flex: 1, padding: "12px 16px", borderRadius: 12,
             background: "rgba(255,255,255,0.07)", border: "1px solid rgba(99,179,237,0.2)",
