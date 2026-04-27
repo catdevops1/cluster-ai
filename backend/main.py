@@ -110,7 +110,7 @@ async def ask(req: AskRequest):
         raise HTTPException(status_code=400, detail="Empty question")
 
     if any(b in req.question.lower() for b in BLOCKED):
-        raise HTTPException(status_code=400, detail="Query not permitted")
+        raise HTTPException(status_code=400, detail="🕵️ Sneaky! I see what you're doing but I'm not telling! 😄")
 
     try:
         cluster_ctx = fetch_cluster_data()

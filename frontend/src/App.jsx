@@ -46,12 +46,21 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, provider }),
       });
+
+
       const data = await res.json();
-      setMessages((m) => [...m, {
-        role: "assistant",
-        text: data.answer || "No response.",
-        provider: data.provider,
-      }]);
+if (!res.ok) {
+  setMessages((m) => [...m, { role: "assistant", text: data.detail || "⚠️ Error.", provider }]);
+  setLoading(false);
+  return;
+}
+setMessages((m) => [...m, {
+  role: "assistant",
+  text: data.answer || "No response.",
+  provider: data.provider,
+}]);
+
+
     } catch (e) {
       setMessages((m) => [...m, { role: "assistant", text: "⚠️ Error reaching the API.", provider: null }]);
     }
