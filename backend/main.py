@@ -22,7 +22,7 @@ app.add_middleware(
 OLLAMA_URL       = os.getenv("OLLAMA_URL", "http://ollama:11434")
 MODEL_NAME       = os.getenv("MODEL_NAME", "llama3.2:1b")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL     = "claude-sonnet-4-20250514"
+CLAUDE_MODEL     = "claude-3-5-sonnet-20241022"
 
 # ── Kubernetes client ────────────────────────────────────────
 def get_k8s_client():
