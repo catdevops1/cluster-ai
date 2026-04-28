@@ -2,13 +2,13 @@
 
 A natural language Kubernetes cluster assistant running on bare-metal. Ask questions about your cluster in plain English and get real-time answers powered by **Claude** (cloud, fast) or **Ollama** (local, private).
 
-**Live at:** `cluster-ai.catdevops.net`(private)
+**Live at:** `cluster-ai.catdevops.net`
 
 ---
 
 ## What It Does
 
-- Fetches **live cluster data** (nodes, pods, deployments, namespaces..) from the Kubernetes API
+- Fetches **live cluster data** (nodes, pods, deployments, namespaces) from the Kubernetes API
 - Sends that data as context to an LLM (Claude or Ollama)
 - Returns human-readable answers with health indicators (✅ ⚠️ ❌)
 - Blocks sensitive queries (secrets, tokens, credentials)
@@ -162,3 +162,4 @@ http://<node-ip>:8080
 ## Related Repos
 
 - [`homelab-k8s-config-pub`](https://github.com/catdevops1/homelab-k8s-config-pub) — GitOps manifests (descheduler, external secrets, gateway, longhorn, vault)
+- [`vault-config-pub`](https://github.com/catdevops1/vault-config-pub) — HashiCorp Vault + External Secrets Operator + AWS KMS auto-unseal
