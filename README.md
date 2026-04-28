@@ -32,6 +32,7 @@ Your cluster-ai API pod is repeatedly crashing, likely due to a
 misconfigured environment variable or application error. Check logs with:
 kubectl logs -n cluster-ai deployment/cluster-ai-api --tail=50
 
+![Telegram Alert](docs/screenshots/telegram-alert.webp)
 — Cluster AI Monitor
 ```
 
@@ -64,7 +65,7 @@ kubectl logs -n cluster-ai deployment/cluster-ai-api --tail=50
 - "Are there any pods in CrashLoopBackOff?"
 - "Is ArgoCD healthy?"
 - "Show me all deployments"
-
+![Chat UI](docs/screenshots/chat-ui.png)
 ---
 
 ## Architecture
@@ -90,7 +91,7 @@ Background Monitor (APScheduler — every 5 minutes)
     ├── api.anthropic.com → Claude generates summary
     └── api.telegram.org → alert sent to your phone
 ```
-
+![ArgoCD](docs/screenshots/argo-cluster-ai.png)
 ---
 
 ## Stack
