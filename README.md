@@ -2,7 +2,52 @@
 
 A natural language Kubernetes cluster assistant running on bare-metal. Ask questions about your cluster in plain English and get real-time answers powered by **Claude** (cloud, fast) or **Ollama** (local, private).
 
-**Live at:** `cluster-ai.catdevops.net`
+**Live at:** `cluster-ai.catdevops.net`(private)
+
+---
+
+## Automated Cluster Monitoring & Telegram Alerts
+
+In addition to the chat interface, Cluster AI runs a **background monitoring system** that watches your cluster 24/7 and sends you a Telegram message when something goes wrong — without you having to ask.
+
+**How it works:**
+
+A background scheduler (APScheduler) runs inside the FastAPI pod every 5 minutes:
+1. Fetches live cluster state from the Kubernetes API
+2. Detects issues — CrashLoopBackOff, NotReady nodes, deployments down, high restart counts
+3. If issues are found → sends data to Claude
+4. Claude generates a human-readable summary with actionable kubectl commands
+5. Sends a Telegram message to your phone instantly
+
+**Example alert:**
+
+```
+🚨 Cluster Alert — catdevops.net
+
+❌ CrashLoopBackOff: cluster-ai/cluster-ai-api-xxx (restarts: 15)
+⚠️ HighRestarts: job-track/job-track-backend (restarts: 47)
+
+🤖 Claude says:
+Your cluster-ai API pod is repeatedly crashing, likely due to a
+misconfigured environment variable or application error. Check logs with:
+kubectl logs -n cluster-ai deployment/cluster-ai-api --tail=50
+
+— Cluster AI Monitor
+```
+
+**Spam protection** — once an issue is alerted, it won't alert again until the cluster recovers. You get one message per issue, not one every 5 minutes.
+
+**What it detects:**
+- Pods in `CrashLoopBackOff`
+- Pods with restart count above threshold (default: 50)
+- Nodes in `NotReady` state
+- Deployments with 0 ready replicas
+
+**Setup:**
+1. Create a Telegram bot via `@BotFather`
+2. Store `BOT_TOKEN` and `CHAT_ID` in Vault
+3. Add to ExternalSecret — secrets are injected automatically
+4. The scheduler starts automatically when the FastAPI pod starts
 
 ---
 
@@ -38,6 +83,12 @@ FastAPI Backend (cluster-ai-api)
     │
     └── [provider=claude] → api.anthropic.com
                               └── claude-haiku-4-5-20251001
+
+Background Monitor (APScheduler — every 5 minutes)
+    │
+    ├── Kubernetes API → detect issues
+    ├── api.anthropic.com → Claude generates summary
+    └── api.telegram.org → alert sent to your phone
 ```
 
 ---
@@ -48,6 +99,8 @@ FastAPI Backend (cluster-ai-api)
 |-----------|------------|
 | Frontend | React + Vite |
 | Backend | FastAPI (Python) |
+| Monitoring | APScheduler (background scheduler) |
+| Alerts | Telegram Bot API |
 | Local LLM | Ollama (`llama3.2:1b`) |
 | Cloud LLM | Anthropic Claude (`claude-haiku-4-5-20251001`) |
 | Container Runtime | containerd |
@@ -66,11 +119,12 @@ FastAPI Backend (cluster-ai-api)
 cluster-ai/
 ├── backend/
 │   ├── main.py              # FastAPI app (Ollama + Claude routing)
+│   ├── monitor.py           # Background scheduler (APScheduler + Telegram alerts)
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx          # React UI with provider toggle
+│   │   ├── App.jsx          # React UI with Ollama/Claude provider toggle
 │   │   └── main.jsx
 │   ├── nginx.conf           # Reverse proxy to FastAPI
 │   ├── Dockerfile
@@ -156,6 +210,45 @@ kubectl port-forward -n cluster-ai service/cluster-ai-frontend 8080:80 --address
 # Access at
 http://<node-ip>:8080
 ```
+
+---
+
+Most Kubernetes dashboards show you data — this one lets you ask questions about it. The goal was to explore how LLMs can be used as an interface layer over live infrastructure data rather than as a general-purpose chatbot.
+
+The interesting engineering challenge: LLMs don't have access to your cluster. The solution is to fetch the cluster state on every request and inject it as context into the prompt — so every answer is based on what's actually running right now, not training data.
+
+The dual-provider architecture (Ollama + Claude) came from a real constraint — the GPU in node04 turned out to have CUDA compute 3.0, too old for any modern inference framework. Ollama runs CPU-only at ~60 seconds per query. That pushed the Claude integration, which responds in ~2 seconds. Sometimes hardware limitations lead to better architecture decisions.
+
+---
+
+EKS / GKE / AKS?
+
+Yes. The app uses the standard Kubernetes Python client which works on any conformant cluster. The monitoring and alerting system works on any Kubernetes distribution.
+
+**What needs adapting per environment:**
+
+| Component | Bare-Metal (this repo) | EKS | GKE | AKS |
+|-----------|----------------------|-----|-----|-----|
+| Secrets | Vault + ESO + AWS KMS | AWS Secrets Manager + ESO or Vault | GCP Secret Manager | Azure Key Vault |
+| Auth | K8s ServiceAccount | IRSA (IAM Roles for Service Accounts) | Workload Identity | Managed Identity |
+| Storage | Longhorn | EBS CSI Driver | Persistent Disk | Azure Disk |
+| Ingress | Envoy Gateway + Cloudflare Tunnel | AWS ALB Ingress | GKE Ingress | AGIC |
+| Load Balancer | MetalLB | AWS NLB/ALB | GCP LB | Azure LB |
+
+**For EKS specifically:**
+- Replace static AWS credentials with **IRSA** — attach an IAM role directly to the Kubernetes ServiceAccount, no secrets needed
+- Use **AWS Secrets Manager** with ESO instead of self-hosted Vault
+- GPU nodes (`g4dn.xlarge` or `p3.2xlarge`) will give Ollama real GPU acceleration since they run supported CUDA versions — unlike the GTX 780M in this homelab
+- The monitoring/alerting system (APScheduler + Claude + Telegram) works out of the box with zero changes
+
+**Production hardening checklist:**
+- [ ] Replace `latest` image tags with commit SHA tags
+- [ ] Add rate limiting (`slowapi`) to FastAPI
+- [ ] Run 2+ API replicas with distributed scheduler lock (Redis) to avoid duplicate alerts
+- [ ] Use IRSA instead of static credentials on EKS
+- [ ] Set Anthropic monthly spend cap
+
+The core FastAPI + React + monitoring architecture is production-grade and cloud-portable. The Kubernetes manifests in `k8s/` are the only thing that needs adapting per environment.
 
 ---
 
