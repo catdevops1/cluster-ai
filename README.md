@@ -22,7 +22,9 @@ A background scheduler (APScheduler) runs inside the FastAPI pod every 5 minutes
 **Example alert:**
 
 ```
-🚨 Cluster Alert — catdevops.net
+🚨 Cluster Alert 
+
+![Telegram Alert](docs/screenshots/telegram-alert.png)
 
 ❌ CrashLoopBackOff: cluster-ai/cluster-ai-api-xxx (restarts: 15)
 ⚠️ HighRestarts: job-track/job-track-backend (restarts: 47)
@@ -32,7 +34,6 @@ Your cluster-ai API pod is repeatedly crashing, likely due to a
 misconfigured environment variable or application error. Check logs with:
 kubectl logs -n cluster-ai deployment/cluster-ai-api --tail=50
 
-![Telegram Alert](docs/screenshots/telegram-alert.webp)
 — Cluster AI Monitor
 ```
 
