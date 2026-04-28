@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from kubernetes import client, config
+from monitor import create_scheduler
 import httpx
 import os
 import logging
@@ -18,6 +19,17 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# ── Startup / Shutdown ───────────────────────────────────────
+@app.on_event("startup")
+async def startup():
+    scheduler = create_scheduler()
+    scheduler.start()
+    logger.info("Cluster monitor scheduler started")
+
+@app.on_event("shutdown")
+async def shutdown():
+    logger.info("Shutting down")
 
 OLLAMA_URL       = os.getenv("OLLAMA_URL", "http://ollama:11434")
 MODEL_NAME       = os.getenv("MODEL_NAME", "llama3.2:1b")

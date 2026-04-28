@@ -36,6 +36,16 @@ spec:
                 secretKeyRef:
                   name: cluster-ai-secret
                   key: ANTHROPIC_API_KEY
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-ai-secret
+                  key: TELEGRAM_BOT_TOKEN
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-ai-secret
+                  key: TELEGRAM_CHAT_ID        
           resources:
             requests:
               memory: "256Mi"
