@@ -13,7 +13,7 @@ ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL       = "claude-haiku-4-5-20251001"
 
 # How many restarts before we alert
-RESTART_THRESHOLD = 10
+RESTART_THRESHOLD = 50
 
 # Track already-alerted issues to avoid spam
 _alerted = set()
@@ -177,8 +177,9 @@ def create_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(
         monitor_cluster,
         "interval",
-        minutes=5,
+        minutes=59,
         id="cluster_monitor",
         replace_existing=True,
+        executor="threadpool",
     )
     return scheduler
