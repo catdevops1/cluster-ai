@@ -1,38 +1,58 @@
-# rbac.yaml
+# k8s/rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cluster-ai-sa
   namespace: cluster-ai
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: cluster-ai-readonly
+  name: cluster-ai-role
 rules:
+  # Core resources
   - apiGroups: [""]
-    resources: ["pods", "nodes", "namespaces", "services", "endpoints"]
+    resources: ["pods", "nodes", "namespaces", "services", "endpoints", "events"]
     verbs: ["get", "list", "watch"]
+  # Apps
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
     verbs: ["get", "list", "watch"]
+  # Batch (CronJobs, Jobs)
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  # Metrics
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+  # cert-manager
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates", "certificaterequests", "issuers", "clusterissuers"]
+    verbs: ["get", "list", "watch"]
+  # Longhorn
+  - apiGroups: ["longhorn.io"]
+    resources: ["volumes", "nodes", "engineimages", "instancemanagers"]
+    verbs: ["get", "list", "watch"]
+  # ArgoCD
   - apiGroups: ["argoproj.io"]
-    resources: ["applications"]
+    resources: ["applications", "appprojects"]
+    verbs: ["get", "list", "watch"]
+  # HPA
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
     verbs: ["get", "list", "watch"]
   # Explicitly NO secrets access
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-ai-readonly-binding
+  name: cluster-ai-role-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-ai-readonly
+  name: cluster-ai-role
 subjects:
   - kind: ServiceAccount
     name: cluster-ai-sa
     namespace: cluster-ai
-
