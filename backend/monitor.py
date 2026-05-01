@@ -18,8 +18,11 @@ CERT_EXPIRY_WARN_DAYS   = 14   # alert if cert expires within this many days
 
 # External endpoints to probe — update with your actual public URLs
 EXTERNAL_ENDPOINTS = [
-    "https://cluster-ai.catdevops.net",
+    "https://catdevops.net",
     "https://fleet-track.catdevops.net",
+    "https://job-track.catdevops.net",
+    "https://invoice-track.catdevops.net",
+    "https://metrics.catdevops.net",
 ]
 
 _restart_snapshot: dict[str, int] = {}
