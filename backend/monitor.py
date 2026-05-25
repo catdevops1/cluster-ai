@@ -1,4 +1,5 @@
 # backend/monitor.py
+import asyncio
 from kubernetes import client, config
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone
@@ -16,7 +17,6 @@ CLAUDE_MODEL            = "claude-haiku-4-5-20251001"
 RESTART_DELTA_THRESHOLD = 3    # new restarts per 5-min window to alert
 CERT_EXPIRY_WARN_DAYS   = 14   # alert if cert expires within this many days
 
-# External endpoints to probe — update with your actual public URLs
 EXTERNAL_ENDPOINTS = [
     "https://catdevops.net",
     "https://fleet-track.catdevops.net",
@@ -36,10 +36,14 @@ def k8s():
         config.load_incluster_config()
     except Exception:
         config.load_kube_config()
+
+    configuration = client.Configuration.get_default_copy()
+    configuration.retries = 1  # reduce from default 3 — less blocking on stale conn
+    api_client = client.ApiClient(configuration)
     return (
-        client.CoreV1Api(),
-        client.AppsV1Api(),
-        client.CustomObjectsApi(),
+        client.CoreV1Api(api_client),
+        client.AppsV1Api(api_client),
+        client.CustomObjectsApi(api_client),
     )
 
 
@@ -267,17 +271,21 @@ async def send_telegram(message: str):
 async def monitor_cluster():
     logger.info("Running cluster health check...")
     try:
-        v1, apps_v1, custom = k8s()
-        issues = (
-            check_pods(v1)
-            + check_nodes(v1)
-            + check_deployments(apps_v1)
-            + check_certificates(custom)
-            + check_longhorn(custom)
-            + check_argocd(custom)
-            + await check_vault()
-            + await check_endpoints()
-        )
+        # Run all blocking sync K8s calls in a thread pool
+        # so they never block the asyncio event loop (and starve health probes)
+        v1, apps_v1, custom = await asyncio.to_thread(k8s)
+
+        pod_issues  = await asyncio.to_thread(check_pods, v1)
+        node_issues = await asyncio.to_thread(check_nodes, v1)
+        dep_issues  = await asyncio.to_thread(check_deployments, apps_v1)
+        cert_issues = await asyncio.to_thread(check_certificates, custom)
+        lh_issues   = await asyncio.to_thread(check_longhorn, custom)
+        argo_issues = await asyncio.to_thread(check_argocd, custom)
+        vault_issues = await check_vault()      # already async
+        ep_issues    = await check_endpoints()  # already async
+
+        issues = (pod_issues + node_issues + dep_issues + cert_issues
+                  + lh_issues + argo_issues + vault_issues + ep_issues)
     except Exception as e:
         logger.error(f"Monitor error: {e}")
         return
