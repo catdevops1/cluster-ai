@@ -21,6 +21,7 @@ spec:
       containers:
         - name: cluster-ai-api
           image: ghcr.io/catdevops1/cluster-ai-api:latest
+          imagePullPolicy: Always  
           ports:
             - containerPort: 8000
           env:
