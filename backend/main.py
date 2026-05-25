@@ -3,7 +3,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from kubernetes import client, config
-from monitor import create_scheduler
+from monitor import create_scheduler, _alerted          # add _alerted
+from telegram_bot import create_bot_job 
 import httpx
 import os
 import logging
@@ -24,6 +25,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     scheduler = create_scheduler()
+    create_bot_job(scheduler, _alerted)                 # register bot job
     scheduler.start()
     logger.info("Cluster monitor scheduler started")
 
