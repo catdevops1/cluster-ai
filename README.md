@@ -2,8 +2,26 @@
 
 A natural language Kubernetes cluster assistant and autonomous monitoring agent running on bare-metal. Ask questions about your cluster in plain English and get real-time answers powered by Claude (cloud, fast) or Ollama (local, private).
 
-**Live at:** `cluster-ai.catdevops.net` (private — Cloudflare Access)
+---
+## Screenshots
 
+### Autonomous Alerts (Telegram)
+![Telegram Alert](docs/screenshots/telegram-alert.png)
+
+### Telegram Bot Commands
+![Telegram Commands](docs/screenshots/telegram-1.png)
+
+### Cluster Status & Deployments
+![Cluster Status](docs/screenshots/telegram2.png)
+
+### Web Interface (Claude)
+![Web UI - Claude](docs/screenshots/chat-ui.png)
+
+### Web Interface (Ollama)
+![Web UI - Ollama](docs/screenshots/ollama-ui.png)
+
+### ArgoCD Integration
+![ArgoCD](docs/screenshots/argo-cluster-ai.png)
 ---
 
 ## Autonomous Cluster Monitoring & Telegram Alerts
