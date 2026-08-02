@@ -21,6 +21,7 @@ metadata:
     app: ollama
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: ollama
@@ -29,11 +30,19 @@ spec:
       labels:
         app: ollama
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: node04
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - node03
+                      - node04
       containers:
         - name: ollama
-          image: ollama/ollama:latest
+          image: ollama/ollama:0.32.1
           ports:
             - containerPort: 11434
           resources:
