@@ -16,7 +16,9 @@ CLAUDE_MODEL            = "claude-haiku-4-5-20251001"
 
 RESTART_DELTA_THRESHOLD = 3    # new restarts per 5-min window to alert
 CERT_EXPIRY_WARN_DAYS   = 14   # alert if cert expires within this many days
-
+SUSTAINED_WINDOW_MINUTES    = 60
+SUSTAINED_RESTART_THRESHOLD = 6
+PENDING_STUCK_MINUTES       = 5
 EXTERNAL_ENDPOINTS = [
     "https://catdevops.net",
     "https://fleet-track.catdevops.net",
@@ -26,6 +28,7 @@ EXTERNAL_ENDPOINTS = [
 ]
 
 _restart_snapshot: dict[str, int] = {}
+_sustained_snapshot: dict[str, tuple[int, datetime]] = {}
 _seeded: bool = False
 _alerted: set[str] = set()
 
@@ -47,17 +50,19 @@ def k8s():
     )
 
 
-# ── 1. Pod restarts + CrashLoopBackOff ──────────────────────
+# ── 1. Pod restarts + CrashLoopBackOff + stalls ─────────────
 def check_pods(v1) -> list[dict]:
-    global _seeded, _restart_snapshot
+    global _seeded, _restart_snapshot, _sustained_snapshot
     issues = []
     pods = v1.list_pod_for_all_namespaces().items
+    now = datetime.now(timezone.utc)
 
     if not _seeded:
         for pod in pods:
             key = f"{pod.metadata.namespace}/{pod.metadata.name}"
             for cs in (pod.status.container_statuses or []):
                 _restart_snapshot[key] = cs.restart_count
+                _sustained_snapshot[key] = (cs.restart_count, now)
         _seeded = True
         logger.info(f"Restart snapshot seeded for {len(_restart_snapshot)} pods — no alerts on first run")
         return []
@@ -65,21 +70,52 @@ def check_pods(v1) -> list[dict]:
     for pod in pods:
         ns, name = pod.metadata.namespace, pod.metadata.name
         key = f"{ns}/{name}"
+
         for cs in (pod.status.container_statuses or []):
             current = cs.restart_count
+
+            # Short window: did something just break?
             if cs.state.waiting and cs.state.waiting.reason == "CrashLoopBackOff":
                 issues.append({"type": "CrashLoopBackOff", "namespace": ns,
-                                "name": name, "detail": f"restarts: {current}"})
+                               "name": name, "detail": f"restarts: {current}"})
             else:
                 prev  = _restart_snapshot.get(key, current)
                 delta = current - prev
                 if delta >= RESTART_DELTA_THRESHOLD:
                     issues.append({"type": "HighRestarts", "namespace": ns,
                                    "name": name, "detail": f"+{delta} new restarts (total: {current})"})
+
+            # Long window: has something been broken this whole time?
+            # Catches steady low-rate failure that never spikes above the
+            # short-window threshold. See docs/nvidia-plugin-silent-failure.md
+            base_count, base_time = _sustained_snapshot.get(key, (current, now))
+            elapsed_min = (now - base_time).total_seconds() / 60
+            if elapsed_min >= SUSTAINED_WINDOW_MINUTES:
+                gained = current - base_count
+                if gained >= SUSTAINED_RESTART_THRESHOLD:
+                    issues.append({"type": "SustainedCrashLoop", "namespace": ns,
+                                   "name": name,
+                                   "detail": f"+{gained} restarts over {int(elapsed_min)}m (total: {current})"})
+                _sustained_snapshot[key] = (current, now)
+            elif key not in _sustained_snapshot:
+                _sustained_snapshot[key] = (current, now)
+
             _restart_snapshot[key] = current
 
-    return issues
+        # Stalled pods: never start, so they never accumulate restarts.
+        # Catches RWO multi-attach deadlocks, image pull failures, unschedulable pods.
+        if pod.status.phase == "Pending" and pod.metadata.creation_timestamp:
+            age_min = (now - pod.metadata.creation_timestamp).total_seconds() / 60
+            if age_min >= PENDING_STUCK_MINUTES:
+                reason = "Pending"
+                for cs in (pod.status.container_statuses or []):
+                    if cs.state.waiting and cs.state.waiting.reason:
+                        reason = cs.state.waiting.reason
+                        break
+                issues.append({"type": "PodStuckPending", "namespace": ns,
+                               "name": name, "detail": f"{reason} for {int(age_min)}m"})
 
+    return issues
 
 # ── 2. Node health ───────────────────────────────────────────
 def check_nodes(v1) -> list[dict]:
@@ -322,6 +358,8 @@ async def monitor_cluster():
         "HighRestarts":           "⚠️",
         "NodeDiskPressure":       "⚠️",
         "NodeMemoryPressure":     "⚠️",
+        "SustainedCrashLoop":     "🔁",
+        "PodStuckPending":        "⏳",
     }
 
     lines = ["🚨 <b>Cluster Alert — catdevops.net</b>\n"]
