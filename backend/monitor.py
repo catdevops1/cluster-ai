@@ -59,8 +59,8 @@ def check_pods(v1) -> list[dict]:
 
     if not _seeded:
         for pod in pods:
-            key = f"{pod.metadata.namespace}/{pod.metadata.name}"
             for cs in (pod.status.container_statuses or []):
+                key = f"{pod.metadata.namespace}/{pod.metadata.name}/{cs.name}"
                 _restart_snapshot[key] = cs.restart_count
                 _sustained_snapshot[key] = (cs.restart_count, now)
         _seeded = True
@@ -69,9 +69,9 @@ def check_pods(v1) -> list[dict]:
 
     for pod in pods:
         ns, name = pod.metadata.namespace, pod.metadata.name
-        key = f"{ns}/{name}"
 
         for cs in (pod.status.container_statuses or []):
+            key = f"{ns}/{name}/{cs.name}"
             current = cs.restart_count
 
             # Short window: did something just break?
